@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Juego de Cartas Digital por Turno</title>
+<style>
+body { font-family: Arial; text-align: center; background: #f0f0f0; }
+#jugadoresContainer { display: flex; justify-content: center; flex-wrap: wrap; gap: 30px; margin-top: 20px; }
+.jugador { text-align: center; }
+.carta {
+  width: 180px; height: 230px;
+  border: 2px solid #333; border-radius: 12px;
+  display: flex; justify-content: center; align-items: center;
+  font-size: 24px; background: white;
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.3); margin: 10px auto;
+}
+.especial { background: #ffeb3b; }
+input { padding: 5px; font-size: 16px; width: 80px; }
+button { padding: 8px 16px; margin: 5px; font-size: 16px; }
+#temporizador { font-size: 20px; margin-top: 20px; }
+</style>
+</head>
+<body>
+
+<h1>Juego de Cartas Digital</h1>
+
+<label>Selecciona número de jugadores: </label>
+<select id="numJugadores">
+  <option value="2">2</option>
+  <option value="3">3</option>
+  <option value="4">4</option>
+</select>
+<button onclick="iniciarJuego()">Iniciar Juego</button>
+
+<div id="temporizador"></div>
+<div id="jugadoresContainer"></div>
+
+<script>
+let jugadores = [];
+let turno = 0;
+let tiempo = 20;
+let temporizador;
+let cartasMazo = [];
+
+function iniciarJuego() {
+    const num = parseInt(document.getElementById("numJugadores").value);
+    jugadores = [];
+    turno = 0;
+    tiempo = 20;
+    clearInterval(temporizador);
+
+    // Crear mazo de ejemplo (se puede ampliar)
+    cartasMazo = [
+        { tipo: "normal", texto: "5 + (-3)", valor: 2 },
+        { tipo: "normal", texto: "-7 + 4", valor: -3 },
+        { tipo: "normal", texto: "(8 - 3) × 2", valor: 10 },
+        { tipo: "normal", texto: "12 ÷ 3", valor: 4 },
+        { tipo: "especial", texto: "⭐ Doble Puntos", valor: 0 },
+        { tipo: "especial", texto: "💣 Ataque", valor: 0 },
+        { tipo: "especial", texto: "⏩ Extra Turno", valor: 0 },
+        { tipo: "especial", texto: "🔄 Barajar", valor: 0 }
+    ];
+
+    // Mezclar mazo
+    cartasMazo.sort(() => Math.random() - 0.5);
+
+    // Crear jugadores
+    const container = document.getElementById("jugadoresContainer");
+    container.innerHTML = '';
+    for (let i = 0; i < num; i++) {
+        jugadores.push({ puntos: 0 });
+        const div = document.createElement("div");
+        div.className = "jugador";
+        div.id = "jugador" + i;
+        div.innerHTML = `
+            <div class="titulo">Jugador ${i+1}</div>
+            <div class="carta" id="carta${i}">-</div>
+            <input type="text" id="respuesta${i}" placeholder="Respuesta">
+            <button onclick="responder(${i})">Responder</button>
+            <div>Puntos: <span id="puntos${i}">0</span></div>
+        `;
+        container.appendChild(div);
+    }
+
+    mostrarTurno();
+}
+
+function mostrarTurno() {
+    // Ocultar todas las cartas
+    jugadores.forEach((_, i) => {
+        document.getElementById("carta" + i).innerText = "-";
+        document.getElementById("respuesta" + i).style.display = "none";
+    });
+
+    // Mostrar carta del turno actual
+    const carta = cartasMazo.pop();
+    jugadores[turno].cartaActual = carta;
+    const cartaDiv = document.getElementById("carta" + turno);
+    cartaDiv.innerText = carta.texto;
+    if (carta.tipo === "especial") cartaDiv.classList.add("especial");
+    else cartaDiv.classList.remove("especial");
+
+    document.getElementById("respuesta" + turno).style.display = carta.tipo === "normal" ? "inline-block" : "none";
+
+    // Iniciar temporizador
+    tiempo = 20;
+    document.getElementById("temporizador").innerText = `Jugador ${turno+1} - Tiempo: ${tiempo}s`;
+    clearInterval(temporizador);
+    temporizador = setInterval(() => {
+        tiempo--;
+        document.getElementById("temporizador").innerText = `Jugador ${turno+1} - Tiempo: ${tiempo}s`;
+        if(tiempo <= 0){
+            alert(`¡Tiempo terminado para el Jugador ${turno+1}!`);
+            siguienteTurno();
+        }
+    }, 1000);
+}
+
+function responder(jugador){
+    const carta = jugadores[jugador].cartaActual;
+    const respInput = document.getElementById("respuesta" + jugador);
+    const puntosSpan = document.getElementById("puntos" + jugador);
+
+    const respuesta = parseInt(respInput.value);
+    if(carta.tipo === "normal"){
+        if(respuesta === carta.valor){
+            alert("¡Correcto!");
+            jugadores[jugador].puntos += carta.valor;
+        } else {
+            alert(`Incorrecto. El valor era ${carta.valor}`);
+        }
+    } else {
+        alert(`Carta especial: ${carta.texto}`);
+        // Aquí puedes agregar efectos reales de carta especial
+    }
+
+    puntosSpan.innerText = jugadores[jugador].puntos;
+    respInput.value = "";
+    siguienteTurno();
+}
+
+function siguienteTurno(){
+    clearInterval(temporizador);
+    turno = (turno + 1) % jugadores.length;
+    if(cartasMazo.length === 0){
+        alert("¡Juego terminado!");
+        mostrarGanador();
+    } else {
+        mostrarTurno();
+    }
+}
+
+function mostrarGanador(){
+    let max = Math.max(...jugadores.map(j => j.puntos));
+    let ganadores = jugadores.map((j,i)=> j.puntos===max?`Jugador ${i+1}`:null).filter(Boolean);
+    alert(`¡Ganador(es): ${ganadores.join(", ")} con ${max} puntos!`);
+}
+</script>
+
+</body>
+</html>
